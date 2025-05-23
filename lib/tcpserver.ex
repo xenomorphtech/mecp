@@ -30,7 +30,7 @@ defmodule JsonrpcServer.TcpServer do
         Logger.info("New client connected")
 
         # Spawn a process to handle this client
-        spawn(fn -> JsonrpcServer.TcpServer.handle_client(client_socket) end)
+        spawn(fn -> __MODULE__.handle_client(client_socket) end)
 
         # Continue accepting new connections
         accept_loop(listen_socket)
@@ -51,7 +51,7 @@ defmodule JsonrpcServer.TcpServer do
         response =
           case Jason.decode(json_data) do
             {:ok, request} ->
-              handle_jsonrpc_request(request)
+              __MODULE__.handle_jsonrpc_request(request)
 
             {:error, error} ->
               create_error_response(nil, -32700, "Parse error: #{inspect(error)}")
@@ -62,7 +62,7 @@ defmodule JsonrpcServer.TcpServer do
         :gen_tcp.send(socket, response_json)
 
         # Continue handling requests from this client
-        handle_client(socket)
+        __MODULE__.handle_client(socket)
 
       {:error, :closed} ->
         Logger.info("Client disconnected")
@@ -197,22 +197,6 @@ defmodule JsonrpcServer.TcpServer do
     }
 
     {:ok, reply}
-  end
-
-  defp dispatch_method("echo", params) when is_list(params) do
-    {:ok, %{"echoed" => params}}
-  end
-
-  defp dispatch_method("echo", params) when is_map(params) do
-    {:ok, %{"echoed" => params}}
-  end
-
-  defp dispatch_method("get_time", _) do
-    {:ok, %{"timestamp" => DateTime.utc_now() |> DateTime.to_iso8601()}}
-  end
-
-  defp dispatch_method("ping", _) do
-    {:ok, "pong"}
   end
 
   defp dispatch_method(method, _params) do
