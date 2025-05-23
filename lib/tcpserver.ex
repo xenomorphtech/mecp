@@ -74,7 +74,7 @@ defmodule JsonrpcServer.TcpServer do
     end
   end
 
-  defp handle_jsonrpc_request(%{"jsonrpc" => "2.0", "method" => method, "id" => id} = request) do
+  def handle_jsonrpc_request(%{"jsonrpc" => "2.0", "method" => method, "id" => id} = request) do
     params = Map.get(request, "params", [])
 
     IO.inspect({:request, method, id, params})
@@ -92,7 +92,7 @@ defmodule JsonrpcServer.TcpServer do
     end
   end
 
-  defp handle_jsonrpc_request(%{"jsonrpc" => "2.0", "method" => method} = request) do
+  def handle_jsonrpc_request(%{"jsonrpc" => "2.0", "method" => method} = request) do
     # Notification (no id field) - don't send response
     IO.inspect({:notification, method, request["id"]})
     params = Map.get(request, "params", [])
@@ -100,25 +100,25 @@ defmodule JsonrpcServer.TcpServer do
     nil
   end
 
-  defp handle_jsonrpc_request(%{"id" => id}) do
+  def handle_jsonrpc_request(%{"id" => id}) do
     create_error_response(id, -32600, "Invalid Request")
   end
 
-  defp handle_jsonrpc_request(_) do
+  def handle_jsonrpc_request(_) do
     create_error_response(nil, -32600, "Invalid Request")
   end
 
   # Protocol version validation
-  defp validate_protocol_version("2024-11-05"), do: :ok
+  def validate_protocol_version("2024-11-05"), do: :ok
   # Also support older version
-  defp validate_protocol_version("2024-10-07"), do: :ok
+  def validate_protocol_version("2024-10-07"), do: :ok
 
-  defp validate_protocol_version(version) do
+  def validate_protocol_version(version) do
     {:error,
      "Unsupported protocol version: #{version}. Supported versions: 2024-11-05, 2024-10-07"}
   end
 
-  defp dispatch_method("initialize", params) do
+  def dispatch_method("initialize", params) do
     client_info = Map.get(params, "clientInfo", %{})
     protocol_version = Map.get(params, "protocolVersion", "2024-11-05")
     capabilities = Map.get(params, "capabilities", %{})
@@ -147,7 +147,15 @@ defmodule JsonrpcServer.TcpServer do
     end
   end
 
-  defp dispatch_method("tools/list", params) do
+  def dispatch_method("prompts/list", params) do
+    {:ok, %{"prompts" => []}}
+  end
+
+  def dispatch_method("resources/list", params) do
+    {:ok, %{"prompts" => []}}
+  end
+
+  def dispatch_method("tools/list", params) do
     tools = %{
       "tools" => [
         %{
@@ -175,10 +183,10 @@ defmodule JsonrpcServer.TcpServer do
     {:ok, tools}
   end
 
-  defp dispatch_method("tools/call", %{
-         "arguments" => %{"code" => code},
-         "name" => "eval_elixir_snippet"
-       }) do
+  def dispatch_method("tools/call", %{
+        "arguments" => %{"code" => code},
+        "name" => "eval_elixir_snippet"
+      }) do
     res =
       try do
         Code.eval_string(code)
@@ -199,11 +207,11 @@ defmodule JsonrpcServer.TcpServer do
     {:ok, reply}
   end
 
-  defp dispatch_method(method, _params) do
+  def dispatch_method(method, _params) do
     {:error, -32601, "Method not found: #{method}"}
   end
 
-  defp create_error_response(id, code, message) do
+  def create_error_response(id, code, message) do
     %{
       "jsonrpc" => "2.0",
       "error" => %{
